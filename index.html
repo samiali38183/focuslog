@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusLog</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #111827; --surface: #1f2937; --surface2: #374151; --surface3: #4b5563;
+      --text: #f9fafb; --muted: #9ca3af; --accent: #ef4444; --accent-glow: rgba(239,68,68,0.25);
+    }
+    body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+
+    /* NAV */
+    nav { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--surface2); position: sticky; top: 0; background: rgba(17,24,39,0.92); z-index: 50; backdrop-filter: blur(8px); }
+    .brand { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.04em; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; box-shadow: 0 0 8px var(--accent-glow); }
+    .nav-pills { display: flex; background: var(--surface); border-radius: 10px; padding: 0.25rem; gap: 0.25rem; }
+    .nav-pill { border: none; background: transparent; color: var(--muted); padding: 0.38rem 1rem; border-radius: 7px; cursor: pointer; font-size: 0.88rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; font-family: inherit; }
+    .nav-pill.active { background: var(--surface2); color: var(--text); font-weight: 600; }
+    .badge { background: var(--accent); color: #fff; border-radius: 20px; font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; min-width: 1.3rem; text-align: center; display: none; }
+    .badge.show { display: inline-block; }
+
+    /* VIEWS */
+    .view { display: none; width: 100%; flex-direction: column; align-items: center; animation: fadeIn 0.22s ease; }
+    .view.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    #viewTimer { justify-content: center; flex: 1; gap: 1.8rem; padding: 2rem 1rem; min-height: calc(100vh - 57px); }
+    #viewDash  { max-width: 700px; padding: 2rem 1.5rem; gap: 2rem; }
+
+    /* TIMER MODE TABS */
+    .mode-tabs { display: flex; gap: 0.4rem; background: var(--surface); padding: 0.3rem; border-radius: 12px; }
+    .mode-tab { padding: 0.45rem 1.1rem; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.88rem; font-weight: 500; transition: all 0.2s; font-family: inherit; }
+    .mode-tab.active { background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 10px var(--accent-glow); }
+
+    /* RING */
+    .timer-wrap { position: relative; width: 260px; height: 260px; }
+    svg.ring { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 7; }
+    .ring-progress { fill: none; stroke: var(--accent); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.4s, filter 0.4s; filter: drop-shadow(0 0 7px var(--accent-glow)); }
+    .timer-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; }
+    .time-display { font-size: 3.8rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+    .mode-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.14em; margin-top: 0.35rem; }
+    .upnext { font-size: 0.7rem; color: var(--muted); opacity: 0.65; margin-top: 0.1rem; }
+
+    /* CONTROLS */
+    .controls { display: flex; gap: 1rem; align-items: center; }
+    .btn { border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.12s, opacity 0.18s, box-shadow 0.2s; font-size: 1rem; }
+    .btn:hover { opacity: 0.88; } .btn:active { transform: scale(0.92); }
+    .btn-play { width: 68px; height: 68px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.7rem; box-shadow: 0 4px 20px var(--accent-glow); }
+    .btn-play:hover { box-shadow: 0 6px 28px var(--accent-glow); }
+    .btn-ico { width: 46px; height: 46px; border-radius: 50%; background: var(--surface); color: var(--muted); font-size: 1.15rem; border: 1px solid var(--surface2); }
+    .btn-ico:hover { color: var(--text); border-color: var(--surface3); }
+
+    /* DOTS */
+    .session-dots { display: flex; gap: 0.55rem; align-items: center; height: 16px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--surface2); transition: background 0.3s, transform 0.2s; }
+    .dot.done { background: var(--accent); }
+    .dot.current { background: var(--accent); opacity: 0.35; transform: scale(1.25); }
+
+    /* SETTINGS */
+    .settings-wrap { width: 100%; max-width: 340px; }
+    .settings-panel { display: none; background: var(--surface); border-radius: 14px; padding: 1.4rem; gap: 1rem; flex-direction: column; border: 1px solid var(--surface2); }
+    .settings-panel.open { display: flex; }
+    .settings-panel h2 { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; }
+    .setting-row label { font-size: 0.87rem; color: var(--muted); flex-shrink: 0; }
+    .setting-row input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .setting-val { font-size: 0.85rem; color: var(--accent); min-width: 5.5rem; text-align: right; font-weight: 600; }
+
+    /* FOOTER */
+    .timer-footer { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: flex; align-items: flex-end; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.22s; backdrop-filter: blur(4px); }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--surface); border-radius: 24px 24px 0 0; padding: 1.5rem 1.5rem 2rem; width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 1.1rem; transform: translateY(100%); transition: transform 0.38s cubic-bezier(0.34,1.2,0.64,1); border-top: 1px solid var(--surface2); }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-handle { width: 36px; height: 4px; background: var(--surface3); border-radius: 2px; margin: 0 auto -0.3rem; }
+    .modal-emoji { font-size: 2.2rem; text-align: center; }
+    .modal-heading { font-size: 1.2rem; font-weight: 700; text-align: center; }
+    .modal-sub { font-size: 0.83rem; color: var(--muted); text-align: center; line-height: 1.5; }
+    .modal-field label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.38rem; font-weight: 500; }
+    .modal-field input { width: 100%; background: var(--bg); border: 1.5px solid var(--surface2); border-radius: 10px; padding: 0.68rem 0.9rem; color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    .modal-field input:focus { border-color: var(--accent); }
+    .modal-field input.err { border-color: var(--accent); animation: shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+    .modal-actions { display: flex; gap: 0.7rem; }
+    .btn-skip { flex: 1; border: 1.5px solid var(--surface2); background: transparent; color: var(--muted); cursor: pointer; padding: 0.7rem; border-radius: 10px; font-size: 0.9rem; font-family: inherit; transition: all 0.18s; }
+    .btn-skip:hover { border-color: var(--surface3); color: var(--text); }
+    .btn-save { flex: 2; border: none; background: var(--accent); color: #fff; cursor: pointer; padding: 0.7rem; border-radius: 10px; font-size: 0.9rem; font-weight: 700; font-family: inherit; box-shadow: 0 4px 14px var(--accent-glow); transition: opacity 0.18s, box-shadow 0.18s; }
+    .btn-save:hover { opacity: 0.9; box-shadow: 0 6px 22px var(--accent-glow); }
+
+    /* DASHBOARD */
+    .dash-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .dash-title { font-size: 1.4rem; font-weight: 800; }
+    .btn-export { border: 1.5px solid var(--surface2); background: transparent; color: var(--muted); padding: 0.42rem 0.9rem; border-radius: 8px; cursor: pointer; font-size: 0.83rem; font-family: inherit; transition: all 0.18s; }
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* CARDS */
+    .cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.8rem; width: 100%; }
+    .card { background: var(--surface); border-radius: 14px; padding: 1.1rem 1.2rem; border: 1px solid var(--surface2); }
+    .card-icon { font-size: 1.1rem; margin-bottom: 0.35rem; }
+    .card-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; font-weight: 600; }
+    .card-value { font-size: 1.65rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .card-sub { font-size: 0.73rem; color: var(--muted); margin-top: 0.22rem; }
+
+    /* SECTION BOX */
+    .section-box { background: var(--surface); border-radius: 16px; padding: 1.3rem 1.4rem; border: 1px solid var(--surface2); width: 100%; }
+    .section-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 1rem; font-weight: 600; }
+
+    /* WEEK CHART */
+    .week-chart { display: flex; align-items: flex-end; gap: 0.5rem; height: 90px; }
+    .week-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; height: 100%; justify-content: flex-end; }
+    .week-bar-mins { font-size: 0.62rem; color: var(--muted); height: 14px; display: flex; align-items: center; }
+    .week-bar-fill { width: 100%; background: var(--accent); border-radius: 5px 5px 0 0; min-height: 3px; opacity: 0.75; transition: height 0.5s cubic-bezier(.4,0,.2,1); }
+    .week-bar-fill.today { opacity: 1; box-shadow: 0 0 10px var(--accent-glow); }
+    .week-bar-fill.empty { background: var(--surface2); opacity: 1; height: 3px !important; }
+    .week-bar-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .week-bar-label.today { color: var(--accent); font-weight: 700; }
+
+    /* PROJECT TABLE */
+    .proj-table { width: 100%; border-collapse: collapse; }
+    .proj-table th { text-align: left; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--surface2); font-weight: 600; }
+    .proj-table td { padding: 0.6rem 0.5rem; font-size: 0.87rem; border-bottom: 1px solid var(--surface2); vertical-align: middle; }
+    .proj-table tr:last-child td { border-bottom: none; }
+    .proj-name-cell { display: flex; align-items: center; gap: 0.45rem; }
+    .proj-swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .proj-bar-wrap { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 0.3rem; }
+    .proj-bar { height: 3px; border-radius: 2px; }
+
+    /* SESSION LIST */
+    .day-group { margin-bottom: 0.2rem; }
+    .day-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0 0.2rem; }
+    .day-total { background: var(--surface); border-radius: 20px; padding: 0.15rem 0.55rem; color: var(--accent); font-weight: 700; font-size: 0.72rem; text-transform: none; letter-spacing: 0; border: 1px solid var(--surface2); }
+    .session-item { background: var(--surface); border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; border: 1px solid transparent; transition: border-color 0.18s; }
+    .session-item:hover { border-color: var(--surface2); }
+    .session-note { font-size: 0.9rem; flex: 1; line-height: 1.4; }
+    .session-meta { display: flex; gap: 0.55rem; align-items: center; flex-shrink: 0; }
+    .session-proj { font-size: 0.7rem; background: var(--surface2); padding: 0.18rem 0.5rem; border-radius: 20px; color: var(--muted); white-space: nowrap; }
+    .session-dur { font-size: 0.8rem; color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .session-time { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+    .btn-del { border: none; background: transparent; color: transparent; cursor: pointer; font-size: 0.78rem; padding: 0.2rem 0.35rem; border-radius: 5px; transition: color 0.15s, background 0.15s; line-height: 1; flex-shrink: 0; }
+    .session-item:hover .btn-del { color: var(--surface3); }
+    .btn-del:hover { color: var(--accent) !important; background: var(--surface2); }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 2.5rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 0.7rem; width: 100%; }
+    .empty-icon { font-size: 2.5rem; opacity: 0.35; }
+    .empty-title { font-size: 1rem; font-weight: 600; color: var(--muted); }
+    .empty-sub { font-size: 0.83rem; color: var(--muted); opacity: 0.7; max-width: 260px; line-height: 1.55; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); color: var(--text); padding: 0.6rem 1.2rem; border-radius: 30px; font-size: 0.87rem; font-weight: 500; transition: transform 0.35s cubic-bezier(.34,1.4,.64,1), opacity 0.3s; z-index: 400; border: 1px solid var(--surface3); white-space: nowrap; opacity: 0; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="brand"><span class="brand-dot"></span>FocusLog</div>
+  <div class="nav-pills">
+    <button class="nav-pill active" data-view="timer">Timer</button>
+    <button class="nav-pill" data-view="dash">Dashboard <span class="badge" id="todayBadge"></span></button>
+  </div>
+</nav>
+
+<!-- TIMER VIEW -->
+<div id="viewTimer" class="view active">
+  <div class="mode-tabs" id="tabs">
+    <button class="mode-tab active" data-mode="work">Focus</button>
+    <button class="mode-tab" data-mode="short">Short Break</button>
+    <button class="mode-tab" data-mode="long">Long Break</button>
+  </div>
+
+  <div class="timer-wrap">
+    <svg class="ring" viewBox="0 0 100 100">
+      <circle class="ring-bg" cx="50" cy="50" r="44"/>
+      <circle class="ring-progress" id="ring" cx="50" cy="50" r="44" stroke-dasharray="276.46" stroke-dashoffset="0"/>
+    </svg>
+    <div class="timer-center">
+      <div class="time-display" id="display">50:00</div>
+      <div class="mode-label" id="modeLabel">Focus Session</div>
+      <div class="upnext" id="upNext"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-ico" id="btnReset" title="Reset (R)">&#8635;</button>
+    <button class="btn btn-play" id="btnPlay" title="Start (Space)">&#9654;</button>
+    <button class="btn btn-ico" id="btnSettings" title="Settings">&#9881;</button>
+  </div>
+
+  <div class="session-dots" id="dots"></div>
+
+  <div class="settings-wrap">
+    <div class="settings-panel" id="settingsPanel">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <label>Focus</label>
+        <input type="range" id="sWork" min="1" max="90" value="50">
+        <span class="setting-val" id="vWork">50 min</span>
+      </div>
+      <div class="setting-row">
+        <label>Short break</label>
+        <input type="range" id="sShort" min="1" max="30" value="10">
+        <span class="setting-val" id="vShort">10 min</span>
+      </div>
+      <div class="setting-row">
+        <label>Long break</label>
+        <input type="range" id="sLong" min="5" max="60" value="30">
+        <span class="setting-val" id="vLong">30 min</span>
+      </div>
+      <div class="setting-row">
+        <label>Long break after</label>
+        <input type="range" id="sSessions" min="2" max="8" value="4">
+        <span class="setting-val" id="vSessions">4 sessions</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-footer">Space &nbsp;=&nbsp; start / pause &nbsp;&nbsp;&middot;&nbsp;&nbsp; R &nbsp;=&nbsp; reset</div>
+</div>
+
+<!-- DASHBOARD VIEW -->
+<div id="viewDash" class="view">
+  <div class="dash-header">
+    <div class="dash-title">Dashboard</div>
+    <button class="btn-export" id="btnExport">Export CSV</button>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div class="section-box">
+    <div class="section-label">This Week</div>
+    <div class="week-chart" id="weekChart"></div>
+  </div>
+  <div class="section-box">
+    <div class="section-label">By Project</div>
+    <div id="projectTable"></div>
+  </div>
+  <div style="width:100%">
+    <div class="section-label">Sessions</div>
+    <div id="sessionList"></div>
+  </div>
+</div>
+
+<!-- LOG MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-emoji" id="modalEmoji">&#127881;</div>
+    <div class="modal-heading">Session complete!</div>
+    <div class="modal-sub">What did you get done? Logging keeps you accountable and helps track billable time.</div>
+    <div class="modal-field">
+      <label for="inputNote">What did you work on? <span style="color:var(--accent)">*</span></label>
+      <input type="text" id="inputNote" placeholder="e.g. Built the login page, reviewed PRs...">
+    </div>
+    <div class="modal-field">
+      <label for="inputProject">Project / Client <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <input type="text" id="inputProject" placeholder="e.g. Client A, Side project..." list="projectSuggestions">
+      <datalist id="projectSuggestions"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-skip" id="btnSkip">Skip</button>
+      <button class="btn-save" id="btnSave">Save &amp; continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// DATA
+const SK = "focusSessions";
+function load() { try { return JSON.parse(localStorage.getItem(SK)||"[]"); } catch(e) { return []; } }
+function save(a) { localStorage.setItem(SK,JSON.stringify(a)); }
+function addSession(note,project,duration) {
+  const a=load(), now=new Date();
+  a.push({id:Date.now(),ts:now.getTime(),date:ds(now),duration,note,project:project||"Uncategorized"});
+  save(a);
+}
+function delSession(id) { save(load().filter(s=>s.id!==id)); }
+function ds(d) { return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+function todayStr() { return ds(new Date()); }
+function p2(n) { return String(n).padStart(2,"0"); }
+function weekStart() { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return d.getTime(); }
+function calcStreak() {
+  const days=[...new Set(load().map(s=>s.date))].sort().reverse();
+  if(!days.length) return 0;
+  let count=0,cur=new Date();
+  for(const day of days){
+    const diff=Math.round((new Date(cur.toDateString())-new Date(new Date(day+"T12:00:00").toDateString()))/86400000);
+    if(diff>1) break;
+    count++; cur=new Date(day+"T12:00:00");
+  }
+  return count;
+}
+
+// TIMER
+const MODES={
+  work: {label:"Focus Session",color:"#ef4444",glow:"rgba(239,68,68,0.25)"},
+  short:{label:"Short Break",  color:"#22c55e",glow:"rgba(34,197,94,0.25)"},
+  long: {label:"Long Break",   color:"#3b82f6",glow:"rgba(59,130,246,0.25)"},
+};
+let cfg={work:50,short:10,long:30,sessions:4};
+let mode="work",timeLeft=50*60,totalTime=50*60,running=false,iv=null,doneWork=0,lastDur=50;
+
+const displayEl=document.getElementById("display");
+const modeLblEl=document.getElementById("modeLabel");
+const upNextEl =document.getElementById("upNext");
+const ringEl   =document.getElementById("ring");
+const btnPlay  =document.getElementById("btnPlay");
+const btnReset =document.getElementById("btnReset");
+const settPanel=document.getElementById("settingsPanel");
+const dotsEl   =document.getElementById("dots");
+const CIRC=276.46;
+
+function setTheme(m){
+  document.documentElement.style.setProperty("--accent",MODES[m].color);
+  document.documentElement.style.setProperty("--accent-glow",MODES[m].glow);
+}
+function applyMode(m){
+  mode=m; timeLeft=totalTime=cfg[m]*60;
+  running=false; clearInterval(iv);
+  btnPlay.innerHTML="&#9654;";
+  modeLblEl.textContent=MODES[m].label;
+  setTheme(m);
+  document.querySelectorAll(".mode-tab").forEach(t=>t.classList.toggle("active",t.dataset.mode===m));
+  updateUpNext(); render();
+}
+function updateUpNext(){
+  if(mode!=="work"){upNextEl.textContent="";return;}
+  upNextEl.textContent=(doneWork+1)%cfg.sessions===0?"Long break next":"Short break next";
+}
+function fmt(s){return p2(Math.floor(s/60))+":"+p2(s%60);}
+function render(){
+  displayEl.textContent=fmt(timeLeft);
+  ringEl.style.strokeDashoffset=CIRC*(timeLeft/totalTime);
+  document.title=fmt(timeLeft)+" · FocusLog";
+}
+function tick(){
+  if(timeLeft<=0){clearInterval(iv);running=false;btnPlay.innerHTML="&#9654;";onFinish();return;}
+  timeLeft--;render();
+}
+function onFinish(){
+  playBeep();
+  if(mode==="work"){lastDur=cfg.work;doneWork++;buildDots();updateTodayBadge();openModal();}
+  else{showToast("Break over — back to it!");applyMode("work");}
+}
+function afterLog(saved){
+  applyMode(doneWork%cfg.sessions===0?"long":"short");
+  showToast(saved?"Session logged! Enjoy your break.":"Break time.");
+}
+function togglePlay(){
+  if(running){clearInterval(iv);running=false;btnPlay.innerHTML="&#9654;";}
+  else{running=true;btnPlay.innerHTML="&#9646;&#9646;";iv=setInterval(tick,1000);}
+}
+function reset(){clearInterval(iv);running=false;btnPlay.innerHTML="&#9654;";timeLeft=totalTime;render();}
+function buildDots(){
+  dotsEl.innerHTML="";
+  for(let i=0;i<cfg.sessions;i++){
+    const d=document.createElement("div");
+    d.className="dot"+(i<doneWork%cfg.sessions?" done":"")+(i===doneWork%cfg.sessions&&mode==="work"?" current":"");
+    dotsEl.appendChild(d);
+  }
+}
+function playBeep(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.3,0.6].forEach(delay=>{
+      const osc=ctx.createOscillator(),g=ctx.createGain();
+      osc.connect(g);g.connect(ctx.destination);
+      osc.frequency.value=880;osc.type="sine";
+      g.gain.setValueAtTime(0,ctx.currentTime+delay);
+      g.gain.linearRampToValueAtTime(0.28,ctx.currentTime+delay+0.05);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+delay+0.28);
+      osc.start(ctx.currentTime+delay);osc.stop(ctx.currentTime+delay+0.35);
+    });
+  }catch(e){}
+}
+
+document.getElementById("tabs").addEventListener("click",e=>{
+  const t=e.target.closest(".mode-tab");
+  if(t){doneWork=0;applyMode(t.dataset.mode);buildDots();}
+});
+btnPlay.addEventListener("click",togglePlay);
+btnReset.addEventListener("click",reset);
+document.getElementById("btnSettings").addEventListener("click",()=>settPanel.classList.toggle("open"));
+
+function bindSlider(id,valId,key,sfx){
+  const sl=document.getElementById(id),vl=document.getElementById(valId);
+  sl.addEventListener("input",()=>{
+    cfg[key]=+sl.value;vl.textContent=sl.value+" "+sfx;
+    if((mode==="work"&&key==="work")||(mode==="short"&&key==="short")||(mode==="long"&&key==="long")){
+      clearInterval(iv);running=false;btnPlay.innerHTML="&#9654;";totalTime=cfg[key]*60;timeLeft=totalTime;render();
+    }
+    if(key==="sessions"){buildDots();updateUpNext();}
+  });
+}
+bindSlider("sWork","vWork","work","min");
+bindSlider("sShort","vShort","short","min");
+bindSlider("sLong","vLong","long","min");
+bindSlider("sSessions","vSessions","sessions","sessions");
+
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT") return;
+  if(e.code==="Space"){e.preventDefault();togglePlay();}
+  if(e.code==="KeyR") reset();
+});
+
+// MODAL
+const overlay  =document.getElementById("modalOverlay");
+const inputNote=document.getElementById("inputNote");
+const inputProj=document.getElementById("inputProject");
+const projSugg =document.getElementById("projectSuggestions");
+const EMOJIS=["&#127881;","&#128293;","&#9889;","&#127775;","&#128170;","&#9971;","&#127942;","&#128640;"];
+
+function openModal(){
+  inputNote.value="";inputProj.value="";inputNote.classList.remove("err");
+  document.getElementById("modalEmoji").innerHTML=EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+  const projs=[...new Set(load().map(s=>s.project).filter(p=>p&&p!=="Uncategorized"))];
+  projSugg.innerHTML="";
+  projs.forEach(p=>{const o=document.createElement("option");o.value=p;projSugg.appendChild(o);});
+  overlay.classList.add("open");
+  setTimeout(()=>inputNote.focus(),380);
+}
+function closeModal(){overlay.classList.remove("open");}
+function doSave(){
+  const note=inputNote.value.trim();
+  if(!note){inputNote.classList.add("err");inputNote.focus();setTimeout(()=>inputNote.classList.remove("err"),600);return;}
+  addSession(note,inputProj.value.trim(),lastDur);
+  closeModal();updateTodayBadge();
+  if(document.getElementById("viewDash").classList.contains("active")) renderDash();
+  afterLog(true);
+}
+document.getElementById("btnSave").addEventListener("click",doSave);
+document.getElementById("btnSkip").addEventListener("click",()=>{closeModal();afterLog(false);});
+overlay.addEventListener("click",e=>{if(e.target===overlay){closeModal();afterLog(false);}});
+document.addEventListener("keydown",e=>{
+  if(!overlay.classList.contains("open")) return;
+  if(e.key==="Enter"&&e.target.tagName==="INPUT") doSave();
+  if(e.key==="Escape"){closeModal();afterLog(false);}
+});
+
+// DASHBOARD
+const PC=["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#ec4899"];
+const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+function fmtM(m){
+  if(!m) return "0m";
+  if(m<60) return m+"m";
+  const h=Math.floor(m/60),mn=m%60;
+  return mn?h+"h "+mn+"m":h+"h";
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+function renderDash(){
+  const all=load(), today=todayStr(), ws=weekStart();
+  const todayS=all.filter(s=>s.date===today);
+  const weekS =all.filter(s=>s.ts>=ws);
+  const todayM=todayS.reduce((a,s)=>a+s.duration,0);
+  const weekM =weekS.reduce((a,s)=>a+s.duration,0);
+  const str=calcStreak();
+
+  document.getElementById("cards").innerHTML=`
+    <div class="card"><div class="card-icon">&#9201;</div><div class="card-label">Today</div><div class="card-value">${fmtM(todayM)}</div><div class="card-sub">${todayS.length} session${todayS.length!==1?"s":""}</div></div>
+    <div class="card"><div class="card-icon">&#128197;</div><div class="card-label">This Week</div><div class="card-value">${fmtM(weekM)}</div><div class="card-sub">${weekS.length} session${weekS.length!==1?"s":""}</div></div>
+    <div class="card"><div class="card-icon">&#128293;</div><div class="card-label">Streak</div><div class="card-value">${str}</div><div class="card-sub">day${str!==1?"s":""} in a row</div></div>`;
+
+  // weekly bar chart
+  const bm=Array(7).fill(0);
+  weekS.forEach(s=>{ bm[new Date(s.ts).getDay()]+=s.duration; });
+  const maxM=Math.max(...bm,1);
+  const td=new Date().getDay();
+  document.getElementById("weekChart").innerHTML=DAYS.map((_,i)=>{
+    const isT=i===td, pct=bm[i]?Math.max(bm[i]/maxM,0.05):0;
+    const h=Math.round(pct*70);
+    const cls="week-bar-fill"+(isT?" today":"")+(bm[i]===0?" empty":"");
+    return `<div class="week-bar-wrap">
+      <div class="week-bar-mins">${bm[i]?fmtM(bm[i]):""}</div>
+      <div class="${cls}" style="height:${bm[i]?h:3}px"></div>
+      <div class="week-bar-label${isT?" today":""}">${DAYS[i]}</div>
+    </div>`;
+  }).join("");
+
+  // project breakdown
+  const pm={};
+  weekS.forEach(s=>{ const p=s.project||"Uncategorized"; if(!pm[p]) pm[p]={mins:0,count:0}; pm[p].mins+=s.duration; pm[p].count+=1; });
+  const projs=Object.entries(pm).sort((a,b)=>b[1].mins-a[1].mins);
+  if(!projs.length){
+    document.getElementById("projectTable").innerHTML="<div style='color:var(--muted);font-size:0.85rem;padding:0.3rem 0'>No sessions this week yet.</div>";
+  } else {
+    const maxPM=projs[0][1].mins;
+    document.getElementById("projectTable").innerHTML=`<table class="proj-table">
+      <thead><tr><th>Project</th><th>Time</th><th>Sessions</th></tr></thead>
+      <tbody>${projs.map(([name,data],i)=>{
+        const c=PC[i%PC.length],w=Math.round(data.mins/maxPM*100);
+        return `<tr>
+          <td><div class="proj-name-cell"><span class="proj-swatch" style="background:${c}"></span>${esc(name)}</div>
+              <div class="proj-bar-wrap"><div class="proj-bar" style="width:${w}%;background:${c}"></div></div></td>
+          <td style="white-space:nowrap;font-weight:600">${fmtM(data.mins)}</td>
+          <td style="color:var(--muted)">${data.count}</td></tr>`;
+      }).join("")}</tbody></table>`;
+  }
+
+  // session list
+  if(!all.length){
+    document.getElementById("sessionList").innerHTML=`<div class="empty-state">
+      <div class="empty-icon">&#9200;</div>
+      <div class="empty-title">No sessions logged yet</div>
+      <div class="empty-sub">Complete a focus session and log what you worked on. It shows up here automatically.</div>
+    </div>`;
+    return;
+  }
+  const grouped={};
+  [...all].reverse().forEach(s=>{ if(!grouped[s.date]) grouped[s.date]=[]; grouped[s.date].push(s); });
+  let html="";
+  Object.entries(grouped).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([date,sessions])=>{
+    const d=new Date(date+"T12:00:00");
+    const lbl=d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"});
+    const dayM=sessions.reduce((a,s)=>a+s.duration,0);
+    html+=`<div class="day-group"><div class="day-label">${lbl}<span class="day-total">${fmtM(dayM)}</span></div>`;
+    sessions.forEach(s=>{
+      const t=new Date(s.ts);
+      const ts=t.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+      html+=`<div class="session-item">
+        <div class="session-note">${esc(s.note)}</div>
+        <div class="session-meta">
+          ${s.project&&s.project!=="Uncategorized"?`<span class="session-proj">${esc(s.project)}</span>`:""}
+          <span class="session-dur">${s.duration}m</span>
+          <span class="session-time">${ts}</span>
+          <button class="btn-del" data-id="${s.id}" title="Delete">&#10005;</button>
+        </div>
+      </div>`;
+    });
+    html+="</div>";
+  });
+  const listEl=document.getElementById("sessionList");
+  listEl.innerHTML=html;
+  listEl.addEventListener("click",e=>{
+    const b=e.target.closest(".btn-del");
+    if(!b) return;
+    delSession(+b.dataset.id);
+    updateTodayBadge();
+    renderDash();
+  });
+}
+
+// BADGE
+function updateTodayBadge(){
+  const n=load().filter(s=>s.date===todayStr()).length;
+  const b=document.getElementById("todayBadge");
+  b.textContent=n; b.classList.toggle("show",n>0);
+}
+
+// EXPORT
+document.getElementById("btnExport").addEventListener("click",()=>{
+  const s=load();
+  if(!s.length){showToast("No sessions to export yet.");return;}
+  const rows=[["Date","Time","Project","Note","Duration (min)"]];
+  s.forEach(s=>{
+    const d=new Date(s.ts);
+    rows.push([d.toLocaleDateString("en-US"),d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}),s.project||"",s.note,s.duration]);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="focuslog-"+todayStr()+".csv"; a.click();
+  showToast("CSV downloaded.");
+});
+
+// NAV
+document.querySelectorAll(".nav-pill").forEach(pill=>{
+  pill.addEventListener("click",()=>{
+    document.querySelectorAll(".nav-pill").forEach(p=>p.classList.remove("active"));
+    pill.classList.add("active");
+    const v=pill.dataset.view;
+    document.getElementById("viewTimer").classList.toggle("active",v==="timer");
+    document.getElementById("viewDash").classList.toggle("active",v==="dash");
+    if(v==="dash") renderDash();
+  });
+});
+
+// TOAST
+let tt;
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+// INIT
+setTheme("work"); render(); buildDots(); updateUpNext(); updateTodayBadge();
+</script>
+</body>
+</html>
