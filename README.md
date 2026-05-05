@@ -1,4 +1,4 @@
-# 🍅 FocusLog
+# FocusLog
 
 > A sleek Pomodoro timer and focus session tracker — built to help you work smarter, not harder.
 >
@@ -9,30 +9,27 @@
 >
 > ---
 >
-> ## ✨ Features
+> ## Features
 >
-> - **🍅 Pomodoro Timer** — Customizable focus/break intervals with animated SVG ring progress
-> - - **📊 Session Logging** — Automatically logs every completed focus session with timestamps
->   - - **📅 Weekly Dashboard** — Visual overview of your productivity across the week
->     - - **⚙️ Customizable Settings** — Adjust focus duration, break length, and daily goals
->       - - **🌙 Dark Theme UI** — Clean, minimal dark interface with smooth animations
->         - - **💾 Persistent Storage** — Sessions saved locally so your data is always there
+> - **Pomodoro Timer** — Customizable focus and break intervals with animated SVG ring progress
+> - - **Session Logging** — Automatically logs every completed focus session with timestamps
+>   - - **Weekly Dashboard** — Visual overview of your productivity across the week
+>     - - **Customizable Settings** — Adjust focus duration, break length, and daily goals
+>       - - **Dark Theme UI** — Clean, minimal dark interface with smooth animations
+>         - - **Persistent Storage** — Sessions saved locally so your data is always there
 >          
 >           - ---
 >
-> ## 🚀 Getting Started
+> ## Getting Started
 >
-> ### Option 1 — Use the Live App
+> ### Use the Live App
 >
 > Visit **[focuslog-ochre.vercel.app](https://focuslog-ochre.vercel.app)** — no installation needed.
 >
-> ### Option 2 — Run Locally
+> ### Run Locally
 >
 > ```bash
-> # Clone the repository
 > git clone https://github.com/samiali38183/focuslog.git
->
-> # Open in browser
 > cd focuslog
 > open index.html
 > ```
@@ -41,19 +38,19 @@
 >
 > ---
 >
-> ## 🛠️ Tech Stack
+> ## Tech Stack
 >
 > | Technology | Purpose |
 > |---|---|
-> | HTML5 | Structure & semantics |
+> | HTML5 | Structure and semantics |
 > | CSS3 | Styling, animations, dark theme |
 > | Vanilla JavaScript | Timer logic, session tracking, local storage |
 > | SVG | Animated circular progress ring |
-> | Vercel | Deployment & hosting |
+> | Vercel | Deployment and hosting |
 >
 > ---
 >
-> ## 📁 Project Structure
+> ## Project Structure
 >
 > ```
 > focuslog/
@@ -63,16 +60,16 @@
 >
 > ---
 >
-> ## 🤝 Contributing
+> ## Contributing
 >
-> Contributions, issues and feature requests are welcome! Feel free to open an issue or submit a pull request.
+> Contributions, issues and feature requests are welcome. Feel free to open an issue or submit a pull request.
 >
 > ---
 >
-> ## 📄 License
+> ## License
 >
 > This project is open source and available under the [MIT License](LICENSE).
 >
 > ---
 >
-> <p align="center">Made with ❤️ by <a href="https://github.com/samiali38183">samiali38183</a>a></p>p>
+> <p align="center">Made with love by <a href="https://github.com/samiali38183">samiali38183</a>a></p>p>
