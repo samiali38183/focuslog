@@ -1,27 +1,16 @@
 # FocusLog
 
-A Pomodoro timer that logs what you worked on and summarizes it by day, week and project. Single HTML file, no build step, no dependencies, no backend.
+A Pomodoro timer that asks what you worked on when a session ends and adds it up by day, week and project. It is one HTML file with no build step, no dependencies and no backend.
 
 Live: [focuslog-ochre.vercel.app](https://focuslog-ochre.vercel.app)
 
-## Features
+## What it does
 
-**Timer**
-- Focus, short break and long break modes with a circular progress ring
-- Defaults to 50 / 10 / 30 minutes with a long break after 4 focus sessions; all four are adjustable with sliders in Settings
-- Audio beep when a session ends
-- Keyboard shortcuts: Space starts or pauses, R resets
+The timer has focus, short break and long break modes and a circular progress ring. The defaults are 50, 10 and 30 minutes, with a long break after every 4 focus sessions. All four numbers have sliders in Settings. A beep plays when a session ends. Space starts or pauses the timer and R resets it.
 
-**Logging**
-- When a focus session ends, a prompt asks what you worked on (required) and an optional project or client name; you can skip it
-- Sessions are saved with a timestamp and duration
+When a focus session ends, a prompt asks what you worked on and, optionally, a project or client name. The note is required, but you can skip the whole prompt and nothing is saved. Each saved session keeps a timestamp and its length.
 
-**Dashboard**
-- Cards for today's and this week's focus time and session count, plus a day streak
-- Bar chart of focus minutes per day for the current week
-- Time and session count per project for the week
-- Full session list with per-session delete
-- Export all sessions to CSV (date, time, project, note, duration in minutes)
+The dashboard shows focus time and session count for today and for this week (weeks start on Sunday), a day streak, a bar chart of minutes per day, and time and sessions per project for the week. Below that is the full session list, where you can delete single sessions. Export CSV downloads every session with date, time, project, note and minutes.
 
 ## Run it
 
@@ -32,13 +21,17 @@ cd focuslog
 
 Open `index.html` in a browser.
 
-## Data and privacy
+## Where the data lives
 
-Sessions are stored in the browser's `localStorage` under the key `focusSessions`. Nothing is sent to a server. Clearing site data deletes your history, so use Export CSV if you want a copy. History is per browser and per device.
+Sessions are stored in the browser's `localStorage` under the key `focusSessions`. Nothing is sent to a server. History is per browser and per device, and clearing site data deletes it, so export a CSV if you want a copy.
 
-## Built with
+## Limits
 
-Plain HTML, CSS and JavaScript (one file, `index.html`). Hosted on Vercel.
+The timer counts one-second ticks with `setInterval`. I have not tested how it behaves in a background tab over a long session, and browsers throttle timers in hidden tabs, so keep the tab visible. There are no tests.
+
+## Stack
+
+Plain HTML, CSS and JavaScript in `index.html`, hosted on Vercel.
 
 ## License
 
