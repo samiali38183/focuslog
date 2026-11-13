@@ -346,7 +346,7 @@ function tick(){
 function onFinish(){
   playBeep();
   if(mode==="work"){lastDur=cfg.work;doneWork++;buildDots();updateTodayBadge();openModal();}
-  else{showToast("Break over — back to it!");applyMode("work");}
+  else{showToast("Break over. Back to it!");applyMode("work");}
 }
 function afterLog(saved){
   applyMode(doneWork%cfg.sessions===0?"long":"short");
